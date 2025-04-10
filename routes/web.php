@@ -16,19 +16,30 @@ use App\Http\Controllers\WelcomeController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+Route::get('/', [WelcomeController::class, 'index']);
 
-Route::get('/', function () {
-    return view('welcome');
+Route::group(['prefix' => 'user'], function () {
+    // Menampilkan halaman awal user
+    Route::get('/', [UserController::class, 'index']);
+
+    // Menampilkan data user dalam bentuk JSON untuk DataTables
+    Route::post('/list', [UserController::class, 'list']);
+
+    // Menampilkan halaman form tambah user
+    Route::get('/create', [UserController::class, 'create']);
+
+    // Menyimpan data user baru
+    Route::post('/', [UserController::class, 'store']);
+
+    // Menampilkan detail user
+    Route::get('/{id}', [UserController::class, 'show']);
+
+    // Menampilkan halaman form edit user
+    Route::get('/{id}/edit', [UserController::class, 'edit']);
+
+    // Menyimpan perubahan data user
+    Route::put('/{id}', [UserController::class, 'update']);
+
+    // Menghapus data user
+    Route::delete('/{id}', [UserController::class, 'destroy']);
 });
-
-Route::get('/level', [LevelController::class, 'index']);
-
-Route::get('/kategori', [KategoriController::class, 'index']);
-
-Route::get('/user', [UserController::class, 'index'])->name('user.index');
-Route::get('/user/tambah', [UserController::class, 'tambah'])->name('user.tambah');
-Route::post('/user/tambah_simpan', [UserController::class, 'tambah_simpan'])->name('user.tambah_simpan');
-Route::get('/user/ubah/{id}', [UserController::class, 'ubah'])->name('user.ubah');
-Route::put('/user/ubah_simpan/{id}', [UserController::class, 'ubah_simpan'])->name('user.ubah_simpan');
-Route::delete('/user/hapus/{id}', [UserController::class, 'hapus'])->name('user.hapus');
-Route::get('/', [WelcomeController::class,'index']);

@@ -10,31 +10,41 @@ use Yajra\DataTables\Facades\DataTables;
 class UserController extends Controller
 {
     // Menampilkan halaman awal user
-    public function index()
-    {
-        $breadcrumb = (object) [
-            'title' => 'Daftar User',
-            'list'  => ['Home', 'User']
-        ];
+  // Menampilkan halaman awal user
+public function index()
+{
+    $breadcrumb = (object) [
+        'title' => 'Daftar User',
+        'list'  => ['Home', 'User']
+    ];
 
-        $page = (object) [
-            'title' => 'Daftar user yang terdaftar dalam sistem'
-        ];
+    $page = (object) [
+        'title' => 'Daftar user yang terdaftar dalam sistem'
+    ];
 
-        $activeMenu = 'user'; // set menu yang sedang aktif
+    $activeMenu = 'user'; // set menu yang sedang aktif
 
-        return view('user.index', [
-            'breadcrumb' => $breadcrumb,
-            'page'       => $page,
-            'activeMenu' => $activeMenu
-        ]);
-    }
+    $level = LevelModel::all(); // ambil data level untuk filter level
+
+    return view('user.index', [
+        'breadcrumb'   => $breadcrumb,
+        'page'         => $page,
+        'level'        => $level,
+        'activeMenu'   => $activeMenu
+    ]);
+}
+
     // Ambil data user dalam bentuk JSON untuk DataTables
 public function list(Request $request)
 {
     $users = UserModel::select('user_id', 'username', 'nama', 'level_id')
         ->with('level'); // relasi ke tabel level
 
+    // filter data user berdasarkan level_id
+    if ($request->level_id) {
+        $users->where('level_id', $request->level_id);
+    }
+        
     return DataTables::of($users)
         ->addIndexColumn() // menambahkan kolom nomor urut (DT_RowIndex)
         ->addColumn('aksi', function ($user) {

@@ -33,6 +33,12 @@ Route::group(['prefix' => 'user'], function () {
     // Menyimpan data user baru
     Route::post('/', [UserController::class, 'store']);
 
+     //menampilkan halaman form tambah user Ajax
+     Route::get('/create_ajax', [UserController::class, 'create_ajax']);
+
+     //menyimpan data user baru ajax
+     Route::post('/ajax', [UserController::class, 'store_ajax']);
+
     // Menampilkan detail user
     Route::get('/{id}', [UserController::class, 'show']);
 
@@ -44,6 +50,8 @@ Route::group(['prefix' => 'user'], function () {
 
     // Menghapus data user
     Route::delete('/{id}', [UserController::class, 'destroy']);
+
+
 });
 
 Route::group(['prefix' => 'kategori'], function () {

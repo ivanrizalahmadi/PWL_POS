@@ -1,75 +1,85 @@
 @extends('layouts.template')
-@section('content')
-<div class="card card-outline card-primary">
-    <div class="card-header">
-        <h3 class="card-title">{{ $page->title }}</h3>
-        <div class="card-tools">
-            <a href="{{ url('kategori/create') }}" class="btn btn-sm btn-primary">Tambah</a>
-        </div>
-    </div>
-    <div class="card-body">
-        @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
-        @if(session('error')) <div class="alert alert-danger">{{ session('error') }}</div> @endif
 
-        {{-- Filter --}}
-        <div class="row mb-3">
-            <div class="col-md-12">
-                <div class="form-group row">
-                    <label class="col-1 control-label col-form-label">Filter :</label>
-                    <div class="col-3">
-                        <select class="form-control form-control-sm" id="filter_kode">
-                            <option value="">- Semua -</option>
-                            @foreach($kodeKategori as $kode)
-                                <option value="{{ $kode }}">{{ $kode }}</option>
-                            @endforeach
-                        </select>
-                        <small class="form-text text-muted">Filter berdasarkan Kode Kategori</small>
-                    </div>
-                </div>
+@section('content')
+    <div class="card card-outline card-primary">
+        <div class="card-header">
+            <h3 class="card-title">{{ $page->title }}</h3>
+            <div class="card-tools">
+                <button onclick="modalAction('{{ url('kategori/create_ajax') }}')" class="btn btn-sm btn-success mt-1">Tambah Ajax</button>
             </div>
         </div>
-        
 
-        <table class="table table-bordered table-striped table-sm" id="table_kategori">
-            <thead>
+        <div class="card-body">
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-danger">{{ session('error') }}</div>
+            @endif
+
+            <table class="table table-bordered table-striped table-hover table-sm" id="table_kategori">
+                <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Kode</th>
-                    <th>Nama</th>
+                    <th>Kode Kategori</th>
+                    <th>Nama Kategori</th>
                     <th>Aksi</th>
                 </tr>
-            </thead>
-        </table>
+                </thead>
+            </table>
+        </div>
     </div>
-</div>
+
+    <div id="myModal" class="modal fade animate shake" tabindex="-1" role="dialog" data- backdrop="static"
+        data-keyboard="false" data-width="75%" aria-hidden="true"></div>
 @endsection
 
-@push('js')
-<script>
-$(function() {
-    let table = $('#table_kategori').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: '{{ url("kategori/list") }}',
-            type: 'POST',
-            data: function(d) {
-                d.kategori_kode = $('#filter_kode').val();
-                d._token = '{{ csrf_token() }}';
-            }
-        },
-        columns: [
-            { data: 'kategori_id', name: 'kategori_id' },
-            { data: 'kategori_kode', name: 'kategori_kode' },
-            { data: 'kategori_nama', name: 'kategori_nama' },
-            { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
-        ]
-    });
-
-    $('#filter_kode').on('change', function() {
-        table.draw();
-    });
-});
-</script>
+@push('css')
 @endpush
 
+@push('js')
+    <script>
+        function modalAction(url = '') {
+            $('#myModal').load(url, function() {
+                $('#myModal').modal('show');
+            });
+        }
+        $(document).ready(function() {
+            var dataKategori = $('#table_kategori').DataTable({
+                serverSide: true, // serverSide: true, jika ingin menggunakan server side processing
+                ajax: {
+                    "url": "{{ url('kategori/list') }}",
+                    "dataType": "json",
+                    "type": "POST"
+                },
+                columns: [
+                    {
+                        data: "DT_RowIndex", // nomor urut dari laravel datatable addIndexColumn()
+                        className: "text-center",
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: "kategori_kode",
+                        className: "",
+                        orderable: true, // orderable: true, jika ingin kolom ini bisa diurutkan
+                        searchable: true // searchable: true, jika ingin kolom ini bisa dicari
+                    },
+                    {
+                        data: "kategori_nama",
+                        className: "",
+                        orderable: true, // orderable: true, jika ingin kolom ini bisa diurutkan
+                        searchable: true // searchable: true, jika ingin kolom ini bisa dicari
+                    },
+                    {
+                        data: "aksi",
+                        className: "",
+                        orderable: false, // orderable: true, jika ingin kolom ini bisa diurutkan
+                        searchable: false // searchable: true, jika ingin kolom ini bisa dicari
+                    }
+                ]
+            });
+        });
+    </script>
+@endpush

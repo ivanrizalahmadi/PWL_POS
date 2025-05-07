@@ -10,6 +10,7 @@
       <li class="nav-item d-none d-sm-inline-block">
         <a href="#" class="nav-link">Contact</a>
       </li>
+      
     </ul>
 
     <!-- Right navbar links -->
@@ -35,6 +36,21 @@
           </form>
         </div>
       </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#" role="button">
+          <i class="fas fa-user-circle"></i> {{ Auth::user()->name ?? 'User' }}
+        </a>
+        <div class="dropdown-menu dropdown-menu-right">
+          <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="dropdown-item text-danger">
+              <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </button>
+          </form>
+        </div>
+      </li>
+      
+      
 
       <!-- Messages Dropdown Menu -->
       <li class="nav-item dropdown">

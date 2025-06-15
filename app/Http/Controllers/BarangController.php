@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Exception;
 use App\Models\LevelModel;
 use App\Models\BarangModel;
 use App\Models\KategoriModel;
@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Yajra\DataTables\Facades\DataTables;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class BarangController extends Controller
 {
@@ -314,8 +316,9 @@ class BarangController extends Controller
         return view('barang.import');
     }
 
-    public function import_ajax(Request $request)
-    {
+   public function import_ajax(Request $request)
+{
+    try {
         $rules = [
             'file_barang' => ['required', 'mimes:xlsx,xls', 'max:1024'],
         ];
@@ -336,7 +339,7 @@ class BarangController extends Controller
         $rows = $sheet->toArray();
 
         $insert = [];
-        $header = array_shift($rows); // Ambil header
+        $header = array_shift($rows);
 
         foreach ($rows as $row) {
             if (!empty($row[0])) {
@@ -354,16 +357,24 @@ class BarangController extends Controller
         if (!empty($insert)) {
             BarangModel::insertOrIgnore($insert);
 
-            return redirect('/barang')->with('success', 'Data barang berhasil diimport: ' . count($insert) . ' record');
-
-            // return response()->json([
-            //     'status' => true,
-            //     'message' => 'Data berhasil diimport: ' . count($insert) . ' record',
-            // ]);
+            return response()->json([
+                'status' => true,
+                'message' => 'Data berhasil diimport: ' . count($insert) . ' record',
+            ]);
         } else {
-            return redirect('/barang')->with('error', 'Data barang kosong');
+            return response()->json([
+                'status' => false,
+                'message' => 'Data barang kosong',
+            ]);
         }
+
+    } catch (Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Terjadi kesalahan saat import: ' . $e->getMessage(),
+        ]);
     }
+}
 
     public function export_excel()
     {
@@ -412,5 +423,16 @@ class BarangController extends Controller
         header('Pragma: no-cache');
         $writer->save('php://output');
         exit;
+    }
+     public function export_pdf()
+    {
+        $barang = BarangModel::select('kategori_id', 'barang_kode', 'barang_nama', 'harga_beli', 'harga_jual')->orderBy('kategori_id')->orderBy('barang_kode')->with('kategori')->get();
+
+        $pdf = Pdf::loadView('barang.export_pdf', ['barang' => $barang]);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOption("isRemoteEnabled", true);
+        $pdf->render();
+
+        return $pdf->stream('Data Barang ' . date('D, d M Y H:i:s') . '.pdf');
     }
 }

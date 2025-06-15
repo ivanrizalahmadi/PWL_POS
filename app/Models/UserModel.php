@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\LevelModel;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravolt\Avatar\Avatar;
 
 
 class UserModel extends Authenticatable
@@ -17,7 +18,7 @@ class UserModel extends Authenticatable
     protected $primaryKey = 'user_id';
 
     protected $fillable = [
-        'username', 'password', 'nama', 'level_id', 'created_at', 'updated_at'
+        'username', 'avatar', 'password', 'nama', 'level_id', 'created_at', 'updated_at'
     ];
 
     protected $hidden = ['password']; // agar password tidak muncul saat select
@@ -46,5 +47,14 @@ class UserModel extends Authenticatable
     public function getRole()
     {
         return $this->level->level_kode;
+    }
+      public function getAvatarUrl(): string
+    {
+        if ($this->avatar && file_exists(public_path($this->avatar))) {
+            return asset($this->avatar);
+        } else {
+            $avatar = new Avatar();
+            return $avatar->create($this->nama)->toBase64();
+        }
     }
 }

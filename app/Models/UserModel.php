@@ -8,10 +8,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\LevelModel;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravolt\Avatar\Avatar;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 
-class UserModel extends Authenticatable
+class UserModel extends Authenticatable implements JWTSubject
 {
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+    
     use HasFactory;
 
     protected $table = 'm_user';

@@ -1,23 +1,20 @@
 <?php
 
 namespace App\Http\Controllers;
-use Exception;
-use App\Models\LevelModel;
-use App\Models\BarangModel;
-use App\Models\KategoriModel;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use Yajra\DataTables\Facades\DataTables;
-use Barryvdh\DomPDF\Facade\Pdf;
 
+use Log;
+use App\Models\BarangModel;
+use Illuminate\Http\Request;
+use App\Models\KategoriModel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Yajra\DataTables\DataTables;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\Validator;
 
 class BarangController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+   
     public function index()
     {
         $breadcrumb = (object) [
@@ -38,7 +35,8 @@ class BarangController extends Controller
 
     public function list(Request $request)
     {
-        $products = BarangModel::select('barang_id', 'barang_kode', 'barang_nama', 'kategori_id', 'harga_beli', 'harga_jual')->with('kategori');
+        $products = BarangModel::select('barang_id', 'barang_kode', 'barang_nama', 'kategori_id', 'harga_beli', 'harga_jual', 'image_barang')
+            ->with('kategori');
 
         // Filter data barang berdasarkan kategori_id
         if ($request->kategori_id) {
@@ -46,30 +44,24 @@ class BarangController extends Controller
         }
 
         return DataTables::of($products)
-            ->addIndexColumn() // menambahkan kolom index / no urut (default nama kolom: DT_RowIndex)
+            ->addIndexColumn()
+            ->addColumn('image', function ($barang) {
+                if ($barang->image_barang) {
+                    return '<img src="' . url('/storage/image_barang/' . $barang->image_barang) . '" width="50" height="50" class="img-thumbnail">';
+                }
+                return 'No Image';
+            })
             ->addColumn('aksi', function ($barang) {
-                // menambahkan kolom aksi
-                // $btn = '<a href="' . url('/barang/' . $barang->barang_id) . '" class="btn btn-info btn-sm">Detail</a> ';
-                // $btn .= '<a href="' . url('/barang/' . $barang->barang_id . '/edit') . '" class="btn btn-warning btn-sm">Edit</a> ';
-                // $btn .= '<form class="d-inline-block" method="POST" action="' . url('/barang/' . $barang->barang_id) . '">'
-                //     . csrf_field() . method_field('DELETE') .
-                //     '<button type="submit" class="btn btn-danger btn-sm"
-                //     onclick="return confirm(\'Apakah Anda yakit menghapus data
-                //     ini?\');">Hapus</button></form>';
                 $btn = '<button onclick="modalAction(\'' . url('/barang/' . $barang->barang_id . '/show_ajax') . '\')" class="btn btn-info btn-sm">Detail</button> ';
-
                 $btn .= '<button onclick="modalAction(\'' . url('/barang/' . $barang->barang_id . '/edit_ajax') . '\')" class="btn btn-warning btn-sm">Edit</button> ';
-
                 $btn .= '<button onclick="modalAction(\'' . url('/barang/' . $barang->barang_id . '/delete_ajax') . '\')" class="btn btn-danger btn-sm">Hapus</button> ';
                 return $btn;
             })
-            ->rawColumns(['aksi']) // memberitahu bahwa kolom aksi adalah html
+            ->rawColumns(['aksi', 'image'])
             ->make(true);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+   
     public function create()
     {
         $breadcrumb = (object) [
@@ -95,9 +87,7 @@ class BarangController extends Controller
         return view('barang.create_ajax')->with('kategori', $kategori);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    
     public function store(Request $request)
     {
         $request->validate([
@@ -121,13 +111,14 @@ class BarangController extends Controller
 
     public function store_ajax(Request $request)
     {
-        if ($request->ajax() || $request->wantsJson) {
+        if ($request->ajax() || $request->wantsJson()) {
             $rules = [
                 'kategori_id' => 'required|int',
                 'barang_kode' => 'required|string|min:3|unique:m_barang,barang_kode',
                 'barang_nama' => 'required|string|max:100',
                 'harga_beli' => 'required|integer',
                 'harga_jual' => 'required|integer',
+                'image_barang' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ];
 
             $validator = Validator::make($request->all(), $rules);
@@ -140,7 +131,16 @@ class BarangController extends Controller
                 ]);
             }
 
-            BarangModel::create($request->all());
+            $data = $request->except('image_barang');
+
+            if ($request->hasFile('image_barang')) {
+                $image = $request->file('image_barang');
+                $imageName = time() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('public/image_barang', $imageName);
+                $data['image_barang'] = $imageName;
+            }
+
+            BarangModel::create($data);
 
             return response()->json([
                 'status' => true,
@@ -150,9 +150,7 @@ class BarangController extends Controller
         return redirect('/');
     }
 
-    /**
-     * Display the specified resource.
-     */
+   
     public function show(string $id)
     {
         $barang = BarangModel::with('kategori')->find($id);
@@ -171,9 +169,7 @@ class BarangController extends Controller
         return view('barang.show', ['breadcrumb' => $breadcrumb, 'page' => $page, 'activeMenu' => $activeMenu, 'barang' => $barang]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    
     public function edit(string $id)
     {
         $barang = BarangModel::find($id);
@@ -234,6 +230,7 @@ class BarangController extends Controller
                 'kategori_id' => 'required|integer',
                 'harga_beli' => 'required|integer',
                 'harga_jual' => 'required|integer',
+                'image_barang' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ];
 
             $validator = Validator::make($request->all(), $rules);
@@ -245,9 +242,24 @@ class BarangController extends Controller
                     'msgField' => $validator->errors(),
                 ]);
             }
-            $check = BarangModel::find($id);
-            if ($check) {
-                $check->update($request->all());
+
+            $barang = BarangModel::find($id);
+            if ($barang) {
+                $data = $request->except('image_barang');
+
+                if ($request->hasFile('image_barang')) {
+                    // Hapus gambar lama jika ada
+                    if ($barang->image_barang && Storage::exists('public/image_barang/' . $barang->image_barang)) {
+                        Storage::delete('public/image_barang/' . $barang->image_barang);
+                    }
+
+                    $image = $request->file('image_barang');
+                    $imageName = time() . '.' . $image->getClientOriginalExtension();
+                    $image->storeAs('public/image_barang', $imageName);
+                    $data['image_barang'] = $imageName;
+                }
+
+                $barang->update($data);
 
                 return response()->json([
                     'status' => true,
@@ -260,7 +272,7 @@ class BarangController extends Controller
                 ]);
             }
         }
-        return redirect('/');
+        return redirect('/barang');
     }
 
     public function confirm_ajax(string $id)
@@ -316,9 +328,8 @@ class BarangController extends Controller
         return view('barang.import');
     }
 
-   public function import_ajax(Request $request)
-{
-    try {
+    public function import_ajax(Request $request)
+    {
         $rules = [
             'file_barang' => ['required', 'mimes:xlsx,xls', 'max:1024'],
         ];
@@ -339,7 +350,7 @@ class BarangController extends Controller
         $rows = $sheet->toArray();
 
         $insert = [];
-        $header = array_shift($rows);
+        $header = array_shift($rows); // Ambil header
 
         foreach ($rows as $row) {
             if (!empty($row[0])) {
@@ -357,24 +368,13 @@ class BarangController extends Controller
         if (!empty($insert)) {
             BarangModel::insertOrIgnore($insert);
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Data berhasil diimport: ' . count($insert) . ' record',
-            ]);
-        } else {
-            return response()->json([
-                'status' => false,
-                'message' => 'Data barang kosong',
-            ]);
-        }
+            return redirect('/barang')->with('success', 'Data barang berhasil diimport: ' . count($insert) . ' record');
 
-    } catch (Exception $e) {
-        return response()->json([
-            'status' => false,
-            'message' => 'Terjadi kesalahan saat import: ' . $e->getMessage(),
-        ]);
+            
+        } else {
+            return redirect('/barang')->with('error', 'Data barang kosong');
+        }
     }
-}
 
     public function export_excel()
     {
@@ -424,7 +424,8 @@ class BarangController extends Controller
         $writer->save('php://output');
         exit;
     }
-     public function export_pdf()
+
+    public function export_pdf()
     {
         $barang = BarangModel::select('kategori_id', 'barang_kode', 'barang_nama', 'harga_beli', 'harga_jual')->orderBy('kategori_id')->orderBy('barang_kode')->with('kategori')->get();
 

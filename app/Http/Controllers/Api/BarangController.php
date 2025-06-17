@@ -18,60 +18,58 @@ class BarangController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'kategori_id' => 'required',
-            'barang_kode' => 'required|unique:m_barang',
+            'barang_kode' => 'required',
             'barang_nama' => 'required',
-            'harga_beli' => 'required|numeric',
-            'harga_jual' => 'required|numeric',
+            'harga_beli' => 'required',
+            'harga_jual' => 'required',
+            'image_barang' => 'required|image|mimes:jpeg,png,jpg,svg|max:2048'
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        $barang = BarangModel::create($request->all());
+        $image = $request->image_barang;
+
+        $barang = BarangModel::create([
+            'kategori_id' => $request->kategori_id,
+            'barang_kode' => $request->barang_kode,
+            'barang_nama' => $request->barang_nama,
+            'harga_beli' => $request->harga_beli,
+            'harga_jual' => $request->harga_jual,
+            'image_barang' => $image->hashName()
+        ]);
+
+        if ($barang) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berhasil disimpan',
+                'barang' => $barang
+            ], 201);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Data barang berhasil disimpan',
-            'barang' => $barang
-        ], 201);
+            'success' => false,
+        ], 409);
     }
 
     public function show(BarangModel $barang)
     {
-        return response()->json($barang);
+        return $barang;
     }
 
     public function update(Request $request, BarangModel $barang)
     {
-        $validator = Validator::make($request->all(), [
-            'kategori_id' => 'required',
-            'barang_kode' => 'required',
-            'barang_nama' => 'required',
-            'harga_beli' => 'required|numeric',
-            'harga_jual' => 'required|numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
         $barang->update($request->all());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Data barang berhasil diperbarui',
-            'barang' => $barang
-        ]);
+        return $barang;
     }
 
     public function destroy(BarangModel $barang)
     {
         $barang->delete();
-
         return response()->json([
             'success' => true,
-            'message' => 'Data barang berhasil dihapus'
+            'message' => 'Data berhasil dihapus'
         ]);
     }
 }
